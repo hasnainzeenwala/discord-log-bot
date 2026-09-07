@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Discord Markdown sync twice daily
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+Persistent=true
+RandomizedDelaySec=5m
+Unit=discord-markdown-sync.service
+
+[Install]
+WantedBy=timers.target

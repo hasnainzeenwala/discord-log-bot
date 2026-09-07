@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+
+# Contains the Discord webhook secret.
+discord-markdown-sync.env
+
+# Local checkpoint when the script is run outside systemd.
+.discord-sync-state.json
+

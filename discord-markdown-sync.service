@@ -1,0 +1,15 @@
+[Unit]
+Description=Sync date-prefixed Markdown files to Discord
+Documentation=https://discord.com/developers/docs/resources/webhook
+Requires=rclone-hasnain-drive.service
+After=rclone-hasnain-drive.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/discord-markdown-sync
+EnvironmentFile=%h/.config/discord-markdown-sync.env
+Environment=MARKDOWN_SYNC_STATE_FILE=%S/discord-markdown-sync/state.json
+StateDirectory=discord-markdown-sync
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
