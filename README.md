@@ -61,6 +61,7 @@ Available settings:
 | `MARKDOWN_SYNC_DIR` | Yes | Directory containing `.md` and `.markdown` files |
 | `DISCORD_WEBHOOK_URL` | Yes | Discord webhook endpoint |
 | `MARKDOWN_SYNC_STATE_FILE` | No | Override the checkpoint location |
+| `DISCORD_THREAD_ID` | No | Post into this numeric Discord thread ID when non-empty |
 | `DISCORD_USERNAME` | No | Override the webhook display name |
 | `DISCORD_AVATAR_URL` | No | Override the webhook avatar |
 | `DISCORD_REQUEST_TIMEOUT` | No | HTTP timeout in seconds; defaults to `30` |
@@ -102,6 +103,10 @@ On every run, the program:
 4. Aborts before delivery if previously synchronized history has diverged.
 5. Sends only files appended after the verified final link.
 6. Atomically advances the checkpoint after each fully delivered file.
+
+When `DISCORD_THREAD_ID` is set, every webhook request targets that Discord
+thread. If it is unset or empty, messages follow the webhook's normal channel
+behavior.
 
 The chain begins with a 32-byte zero value and advances as follows:
 

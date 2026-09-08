@@ -7,6 +7,7 @@ Required environment variables:
 
 Optional environment variables:
     MARKDOWN_SYNC_STATE_FILE  Checkpoint file (default: <sync-dir>/.discord-sync-state.json).
+    DISCORD_THREAD_ID         Post into this Discord thread when non-empty.
     DISCORD_USERNAME          Override the webhook display name.
     DISCORD_AVATAR_URL        Override the webhook avatar.
     DISCORD_REQUEST_TIMEOUT   HTTP timeout in seconds (default: 30).
@@ -26,6 +27,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
@@ -44,6 +46,7 @@ class Config:
     source_dir: Path
     state_file: Path
     webhook_url: str
+    thread_id: str | None
     username: str | None
     avatar_url: str | None
     timeout: float
@@ -58,6 +61,10 @@ def load_config() -> Config:
         raise ValueError("DISCORD_WEBHOOK_URL is required")
     if not webhook.startswith(("https://discord.com/api/webhooks/", "https://discordapp.com/api/webhooks/")):
         raise ValueError("DISCORD_WEBHOOK_URL does not look like a Discord webhook URL")
+
+    thread_id = os.environ.get("DISCORD_THREAD_ID", "").strip()
+    if thread_id and (not thread_id.isascii() or not thread_id.isdigit()):
+        raise ValueError("DISCORD_THREAD_ID must be a numeric Discord thread ID")
 
     source_dir = Path(source).expanduser().resolve()
     state_value = os.environ.get("MARKDOWN_SYNC_STATE_FILE")
@@ -77,6 +84,7 @@ def load_config() -> Config:
         source_dir=source_dir,
         state_file=state_file,
         webhook_url=webhook,
+        thread_id=thread_id or None,
         username=os.environ.get("DISCORD_USERNAME"),
         avatar_url=os.environ.get("DISCORD_AVATAR_URL"),
         timeout=timeout,
@@ -249,6 +257,16 @@ def retry_delay(response_headers: Any, body: bytes, attempt: int) -> float:
         return min(2 ** attempt, 30)
 
 
+def webhook_target_url(webhook_url: str, thread_id: str | None) -> str:
+    """Add or replace Discord's thread_id query parameter when configured."""
+    if not thread_id:
+        return webhook_url
+    parts = urlsplit(webhook_url)
+    query = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True) if key != "thread_id"]
+    query.append(("thread_id", thread_id))
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
 def post_message(config: Config, content: str) -> None:
     payload: dict[str, Any] = {
         "content": content,
@@ -262,7 +280,7 @@ def post_message(config: Config, content: str) -> None:
 
     for attempt in range(MAX_ATTEMPTS):
         request = Request(
-            config.webhook_url,
+            webhook_target_url(config.webhook_url, config.thread_id),
             data=data,
             headers={"Content-Type": "application/json", "User-Agent": "discord-markdown-sync/1.0"},
             method="POST",
